@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+import subprocess
 
 import click
 from rich import print
@@ -72,3 +73,26 @@ def cp(src_folder, destination_folder):
 # @jetha_bhai.command("sunder-aaya")
 # def cd_dot_dot():
 #     print(f"lo bhai aa gaye hum ye path pai {os.path.abspath('/../')}")
+
+
+@jetha_bhai.command("git-chalu-karo", help="Initialize a new Git repository")
+def git_chalu_karo():
+    try:
+        subprocess.run(["git", "init"], capture_output=True, text=True, check=True)
+        print_rainbow("Git chalu kar diya hai, ab Daya ko mat bolna!")
+    except subprocess.CalledProcessError as e:
+        print_rainbow(f"Error encountered: {e.stderr}")
+    except FileNotFoundError:
+        print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
+
+
+@jetha_bhai.command("commit-maro", help="Commit changes to the Git repository")
+@click.argument("message")
+def commit_maro(message):
+    try:
+        subprocess.run(["git", "commit", "-m", message], capture_output=True, text=True, check=True)
+        print_rainbow("Commit kar diya hai, Champak chacha ko mat batana!")
+    except subprocess.CalledProcessError as e:
+        print_rainbow(f"Error encountered: {e.stderr}")
+    except FileNotFoundError:
+        print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
