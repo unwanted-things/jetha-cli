@@ -81,7 +81,10 @@ def git_chalu_karo():
         subprocess.run(["git", "init"], capture_output=True, text=True, check=True)
         print_rainbow("Git chalu kar diya hai, ab Daya ko mat bolna!")
     except subprocess.CalledProcessError as e:
-        print_rainbow(f"Error encountered: {e.stderr}")
+        error_message = e.stderr
+        if not error_message: # Checks for empty string, None, etc.
+            error_message = "An unknown error occurred while initializing the Git repository."
+        print_rainbow(f"Error encountered: {error_message.strip()}")
         click.get_current_context().exit(1)
     except FileNotFoundError:
         print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
@@ -95,7 +98,10 @@ def commit_maro(message):
         subprocess.run(["git", "commit", "-m", message], capture_output=True, text=True, check=True)
         print_rainbow("Commit kar diya hai, Champak chacha ko mat batana!")
     except subprocess.CalledProcessError as e:
-        print_rainbow(f"Error encountered: {e.stderr}")
+        error_message = e.stderr
+        if not error_message: # Checks for empty string, None, etc.
+            error_message = "An unknown error occurred during the commit."
+        print_rainbow(f"Error encountered: {error_message.strip()}")
         click.get_current_context().exit(1)
     except FileNotFoundError:
         print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
