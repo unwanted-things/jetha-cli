@@ -82,8 +82,10 @@ def git_chalu_karo():
         print_rainbow("Git chalu kar diya hai, ab Daya ko mat bolna!")
     except subprocess.CalledProcessError as e:
         print_rainbow(f"Error encountered: {e.stderr}")
+        click.get_current_context().exit(1)
     except FileNotFoundError:
         print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
+        click.get_current_context().exit(1)
 
 
 @jetha_bhai.command("commit-maro", help="Commit changes to the Git repository")
@@ -94,5 +96,7 @@ def commit_maro(message):
         print_rainbow("Commit kar diya hai, Champak chacha ko mat batana!")
     except subprocess.CalledProcessError as e:
         print_rainbow(f"Error encountered: {e.stderr}")
+        click.get_current_context().exit(1)
     except FileNotFoundError:
         print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
+        click.get_current_context().exit(1)
