@@ -37,6 +37,7 @@ class TestGitCommands(unittest.TestCase):
             print(f"Exception in git-chalu-karo: {result.exception}")
             import traceback
             traceback.print_exception(type(result.exception), result.exception, result.exc_info[2])
+            self.fail(f"CLI command 'git-chalu-karo' raised an unexpected exception: {result.exception}")
         
         # Check exit code first, then output, then side effects
         # Check if the CLI command itself failed due to error handling (exit(1))
@@ -53,9 +54,21 @@ class TestGitCommands(unittest.TestCase):
 
         # 1. Initialize a Git repository using the CLI command
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
+        if init_result.exception:
+            print(f"Exception in prerequisite 'git-chalu-karo': {init_result.exception}")
+            import traceback
+            traceback.print_exception(type(init_result.exception), init_result.exception, init_result.exc_info[2])
+            self.fail(f"Prerequisite 'git-chalu-karo' raised an unexpected exception: {init_result.exception}")
+        
         # Allow for the case where .git might already exist if tests are run multiple times and cleanup failed once.
         # The command should still pass if it's already a git repo.
-        # self.assertEqual(init_result.exit_code, 0, f"Pre-requisite 'git-chalu-karo' failed: {init_result.output}")
+        # We also need to check init_result.exit_code if there was no exception, 
+        # as git-chalu-karo itself might return non-zero for a known error.
+        if init_result.exit_code != 0 and "Error encountered" in init_result.output:
+             pass # This is an expected failure if git init fails (e.g. already initialized, caught by CLI)
+        elif init_result.exit_code !=0: # If no "Error encountered" message, but still non-zero code
+            self.assertEqual(init_result.exit_code, 0, msg=f"Prerequisite 'git-chalu-karo' failed unexpectedly. Output: {init_result.output}")
+
         self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo or did not exist.")
 
         # 2. Create a dummy file
@@ -77,6 +90,7 @@ class TestGitCommands(unittest.TestCase):
             print(f"Exception in commit-maro: {commit_result.exception}")
             import traceback
             traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
+            self.fail(f"CLI command 'commit-maro' raised an unexpected exception: {commit_result.exception}")
         
         # Check if the CLI command itself failed due to error handling (exit(1))
         # e.g. if commit is run without staging, git commit returns non-zero.
@@ -98,7 +112,12 @@ class TestGitCommands(unittest.TestCase):
 
         # 1. Initialize a Git repository
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
-        self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo.")
+        if init_result.exception:
+            print(f"Exception in prerequisite 'git-chalu-karo' for no_staging test: {init_result.exception}")
+            import traceback
+            traceback.print_exception(type(init_result.exception), init_result.exception, init_result.exc_info[2])
+            self.fail(f"Prerequisite 'git-chalu-karo' for no_staging test raised an unexpected exception: {init_result.exception}")
+        self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo for no_staging test.")
         
         # Configure git user
         subprocess.run(["git", "config", "user.email", "test@example.com"], check=True)
@@ -107,6 +126,12 @@ class TestGitCommands(unittest.TestCase):
         # 2. Attempt to commit without staging any files
         commit_message = "Attempting commit with no staged files"
         commit_result = runner.invoke(jetha_bhai, ["commit-maro", commit_message])
+
+        if commit_result.exception:
+            print(f"Exception in commit-maro (no staging): {commit_result.exception}")
+            import traceback
+            traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
+            self.fail(f"CLI command 'commit-maro' (no staging) raised an unexpected exception: {commit_result.exception}")
         
         # Expecting a non-zero exit code because git commit should fail
         self.assertNotEqual(commit_result.exit_code, 0, "CLI command 'commit-maro' should have failed for no staged files, but it succeeded.")
