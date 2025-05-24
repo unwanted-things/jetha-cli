@@ -4,6 +4,7 @@ import subprocess
 import tempfile # Added import
 import unittest
 import click # Added import
+from unittest.mock import patch # Added import
 from click.testing import CliRunner
 
 # Import for running tests from the project root directory (/app)
@@ -33,17 +34,13 @@ class TestGitCommands(unittest.TestCase):
         result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
         
         if result.exception:
-            print(f"Exception in git-chalu-karo: {result.exception}")
-            import traceback
-            traceback.print_exception(type(result.exception), result.exception, result.exc_info[2])
+            # Removed print and traceback statements
             self.fail(f"CLI command 'git-chalu-karo' raised an unexpected exception: {result.exception}")
         
-        # Check exit code first, then output, then side effects
-        # Check if the CLI command itself failed due to error handling (exit(1))
-        if result.exit_code != 0 and "Error encountered" in result.output:
-             pass # This is an expected failure if git init fails (e.g. already initialized, caught by CLI)
-        else: # If no "Error encountered" message, it should be a clean success.
-            self.assertEqual(result.exit_code, 0, msg=f"CLI command 'git-chalu-karo' failed unexpectedly. Output: {result.output}")
+        self.assertTrue(
+            (result.exit_code == 0) or ("Error encountered" in result.output),
+            msg=f"CLI command 'git-chalu-karo' failed unexpectedly. Exit code: {result.exit_code}, Output: {result.output}"
+        )
         
         self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created in the test directory.")
 
@@ -54,19 +51,15 @@ class TestGitCommands(unittest.TestCase):
         # 1. Initialize a Git repository using the CLI command
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
         if init_result.exception:
-            print(f"Exception in prerequisite 'git-chalu-karo': {init_result.exception}")
-            import traceback
-            traceback.print_exception(type(init_result.exception), init_result.exception, init_result.exc_info[2])
+            # Removed print and traceback statements
             self.fail(f"Prerequisite 'git-chalu-karo' raised an unexpected exception: {init_result.exception}")
         
         # Allow for the case where .git might already exist if tests are run multiple times and cleanup failed once.
         # The command should still pass if it's already a git repo.
-        # We also need to check init_result.exit_code if there was no exception, 
-        # as git-chalu-karo itself might return non-zero for a known error.
-        if init_result.exit_code != 0 and "Error encountered" in init_result.output:
-             pass # This is an expected failure if git init fails (e.g. already initialized, caught by CLI)
-        elif init_result.exit_code !=0: # If no "Error encountered" message, but still non-zero code
-            self.assertEqual(init_result.exit_code, 0, msg=f"Prerequisite 'git-chalu-karo' failed unexpectedly. Output: {init_result.output}")
+        self.assertTrue(
+            (init_result.exit_code == 0) or ("Error encountered" in init_result.output),
+            msg=f"Prerequisite 'git-chalu-karo' failed unexpectedly. Exit code: {init_result.exit_code}, Output: {init_result.output}"
+        )
 
         self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo or did not exist.")
 
@@ -86,9 +79,7 @@ class TestGitCommands(unittest.TestCase):
         commit_result = runner.invoke(jetha_bhai, ["commit-maro", commit_message])
         
         if commit_result.exception:
-            print(f"Exception in commit-maro: {commit_result.exception}")
-            import traceback
-            traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
+            # Removed print and traceback statements
             self.fail(f"CLI command 'commit-maro' raised an unexpected exception: {commit_result.exception}")
         
         # Check if the CLI command itself failed due to error handling (exit(1))
@@ -112,9 +103,7 @@ class TestGitCommands(unittest.TestCase):
         # 1. Initialize a Git repository
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
         if init_result.exception:
-            print(f"Exception in prerequisite 'git-chalu-karo' for no_staging test: {init_result.exception}")
-            import traceback
-            traceback.print_exception(type(init_result.exception), init_result.exception, init_result.exc_info[2])
+            # Removed print and traceback statements
             self.fail(f"Prerequisite 'git-chalu-karo' for no_staging test raised an unexpected exception: {init_result.exception}")
         self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo for no_staging test.")
         
@@ -134,9 +123,7 @@ class TestGitCommands(unittest.TestCase):
             # result.exit_code is also set to this code.
             if not isinstance(commit_result.exception, (SystemExit, click.exceptions.Exit)):
                 # This was an actual Python exception other than SystemExit/Exit.
-                print(f"Unexpected Python exception in commit-maro (no staging): {commit_result.exception}")
-                import traceback
-                traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
+                # Removed print and traceback statements
                 self.fail(f"CLI command 'commit-maro' (no staging) raised an unexpected Python exception: {commit_result.exception}")
             
             # Check if the exit code from SystemExit/Exit was 0, which is not expected here.
@@ -152,6 +139,24 @@ class TestGitCommands(unittest.TestCase):
         # Check that no commit was made
         log_process = subprocess.run(["git", "log", "-1", "--pretty=%B"], capture_output=True, text=True)
         self.assertNotEqual(log_process.stdout.strip(), commit_message, "A commit was made even though it should have failed.")
+
+    @patch('jetha_cli.src.subprocess.run') # Patching subprocess.run in the context of jetha_cli.src module
+    def test_git_commands_file_not_found(self, mock_subprocess_run):
+        runner = CliRunner()
+        mock_subprocess_run.side_effect = FileNotFoundError("Mocked FileNotFoundError: git command not found")
+
+        # Test 'git-chalu-karo'
+        result_init = runner.invoke(jetha_bhai, ['git-chalu-karo'])
+        self.assertNotEqual(result_init.exit_code, 0, "CLI should exit with non-zero code on FileNotFoundError for git-chalu-karo.")
+        self.assertIn("Git command not found. Make sure Git is installed and in your PATH.", result_init.output)
+
+        # Reset side_effect for the next call if necessary, or ensure it's general enough
+        # For FileNotFoundError, it's general.
+
+        # Test 'commit-maro'
+        result_commit = runner.invoke(jetha_bhai, ['commit-maro', 'test message for file not found'])
+        self.assertNotEqual(result_commit.exit_code, 0, "CLI should exit with non-zero code on FileNotFoundError for commit-maro.")
+        self.assertIn("Git command not found. Make sure Git is installed and in your PATH.", result_commit.output)
 
 
 if __name__ == "__main__":
