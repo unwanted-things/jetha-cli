@@ -1,7 +1,9 @@
 import os
 import shutil
 import subprocess
+import tempfile # Added import
 import unittest
+import click # Added import
 from click.testing import CliRunner
 
 # Import for running tests from the project root directory (/app)
@@ -12,25 +14,22 @@ class TestGitCommands(unittest.TestCase):
         """Set up a temporary directory for testing."""
         # self.original_cwd will be the project root (e.g., /app) when tests are run from there.
         self.original_cwd = os.getcwd()
-        self.test_dir_name = "temp_test_dir_for_cli_tests" # Unique name
-        
-        # Create the test directory relative to the original_cwd
-        os.makedirs(self.test_dir_name, exist_ok=True)
+        self.temp_dir = tempfile.TemporaryDirectory() # Create TemporaryDirectory
         
         # Change CWD to the newly created temporary directory
-        os.chdir(self.test_dir_name)
+        os.chdir(self.temp_dir.name) # Use temp_dir.name
 
     def tearDown(self):
         """Clean up the temporary directory."""
         # Change back to the original CWD *before* trying to remove the test_dir
         os.chdir(self.original_cwd)
         
-        # Remove the temporary directory
-        shutil.rmtree(self.test_dir_name, ignore_errors=True)
+        # Clean up the temporary directory
+        self.temp_dir.cleanup()
 
     def test_git_chalu_karo(self):
         runner = CliRunner()
-        # We are now in self.test_dir_name
+        # We are now in self.temp_dir.name
         result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
         
         if result.exception:
@@ -50,7 +49,7 @@ class TestGitCommands(unittest.TestCase):
 
     def test_commit_maro_success(self):
         runner = CliRunner()
-        # We are in self.test_dir_name
+        # We are in self.temp_dir.name
 
         # 1. Initialize a Git repository using the CLI command
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
@@ -77,8 +76,8 @@ class TestGitCommands(unittest.TestCase):
             f.write("This is a test file for commit-maro.")
         
         # 3. Stage the file using git add & configure git user
-        subprocess.run(["git", "config", "user.email", "test@example.com"], check=True, capture_output=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], check=True, capture_output=True, text=True)
         stage_process = subprocess.run(["git", "add", dummy_file], capture_output=True, text=True)
         self.assertEqual(stage_process.returncode, 0, f"git add failed: {stage_process.stderr}")
 
@@ -108,7 +107,7 @@ class TestGitCommands(unittest.TestCase):
 
     def test_commit_maro_no_staging(self):
         runner = CliRunner()
-        # We are in self.test_dir_name
+        # We are in self.temp_dir.name
 
         # 1. Initialize a Git repository
         init_result = runner.invoke(jetha_bhai, ["git-chalu-karo"])
@@ -120,18 +119,32 @@ class TestGitCommands(unittest.TestCase):
         self.assertTrue(os.path.isdir(".git"), "'.git' directory was not created by git-chalu-karo for no_staging test.")
         
         # Configure git user
-        subprocess.run(["git", "config", "user.email", "test@example.com"], check=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], check=True)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], check=True, capture_output=True, text=True)
+        subprocess.run(["git", "config", "user.name", "Test User"], check=True, capture_output=True, text=True)
 
         # 2. Attempt to commit without staging any files
         commit_message = "Attempting commit with no staged files"
         commit_result = runner.invoke(jetha_bhai, ["commit-maro", commit_message])
 
         if commit_result.exception:
-            print(f"Exception in commit-maro (no staging): {commit_result.exception}")
-            import traceback
-            traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
-            self.fail(f"CLI command 'commit-maro' (no staging) raised an unexpected exception: {commit_result.exception}")
+            # We expect _handle_git_command_error to call ctx.exit(1).
+            # CliRunner catches SystemExit (and click.exceptions.Exit is a SystemExit).
+            # The actual exception instance is in result.exception.
+            # The exit code of the exception is in result.exception.code.
+            # result.exit_code is also set to this code.
+            if not isinstance(commit_result.exception, (SystemExit, click.exceptions.Exit)):
+                # This was an actual Python exception other than SystemExit/Exit.
+                print(f"Unexpected Python exception in commit-maro (no staging): {commit_result.exception}")
+                import traceback
+                traceback.print_exception(type(commit_result.exception), commit_result.exception, commit_result.exc_info[2])
+                self.fail(f"CLI command 'commit-maro' (no staging) raised an unexpected Python exception: {commit_result.exception}")
+            
+            # Check if the exit code from SystemExit/Exit was 0, which is not expected here.
+            # Note: isinstance check above ensures commit_result.exception has 'code' attribute.
+            if hasattr(commit_result.exception, 'code') and commit_result.exception.code == 0:
+                self.fail(f"CLI command 'commit-maro' (no staging) exited with code 0 but a failure was expected.")
+            # If it's a SystemExit/Exit with a non-zero code, that's expected, so we don't fail here.
+            # The assertions below on result.exit_code and output will verify the details.
         
         # Expecting a non-zero exit code because git commit should fail
         self.assertNotEqual(commit_result.exit_code, 0, "CLI command 'commit-maro' should have failed for no staged files, but it succeeded.")

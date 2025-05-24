@@ -20,7 +20,7 @@ jetha-bhai list-kardo
 
 ## Table
 
-| Command (Shell)        | Jetha-Bhai CLI Command            | Description                                     |
+| Command (Shell)        | jetha-bhai CLI Command            | Description                                     |
 | ---------------------- | --------------------------------- | ----------------------------------------------- |
 | `pwd`                  | `jetha-bhai babita-ji-kaha`       | Display the current working directory.          |
 | `ls`                   | `jetha-bhai list-kardo`           | List files and directories.                     |
