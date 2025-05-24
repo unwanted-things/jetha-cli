@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+import subprocess
 
 import click
 from rich import print
@@ -11,6 +12,20 @@ def print_rainbow(line):
     color = random.choice(colors)
     print("")
     print(f"[{color}]{line}[/{color}]")
+
+
+def _handle_git_command_error(ctx, e, default_error_message):
+    if isinstance(e, FileNotFoundError):
+        print_rainbow("Git command not found. Make sure Git is installed and in your PATH.")
+        ctx.exit(1)
+    elif isinstance(e, subprocess.CalledProcessError):
+        error_output = e.stderr.strip() if e.stderr else default_error_message
+        print_rainbow(f"Error encountered: {error_output}")
+        ctx.exit(1)
+    else:
+        # Fallback for any other unexpected exceptions
+        print_rainbow(f"An unexpected error occurred: {str(e)}")
+        ctx.exit(1)
 
 
 @click.group("jetha-bhai")
@@ -72,3 +87,28 @@ def cp(src_folder, destination_folder):
 # @jetha_bhai.command("sunder-aaya")
 # def cd_dot_dot():
 #     print(f"lo bhai aa gaye hum ye path pai {os.path.abspath('/../')}")
+
+
+@jetha_bhai.command("git-chalu-karo", help="Initialize a new Git repository")
+@click.pass_context
+def git_chalu_karo(ctx):
+    try:
+        subprocess.run(["git", "init"], capture_output=True, text=True, check=True)
+        print_rainbow("Git chalu kar diya hai, ab Daya ko mat bolna!")
+    except FileNotFoundError as e:
+        _handle_git_command_error(ctx, e, "")
+    except subprocess.CalledProcessError as e:
+        _handle_git_command_error(ctx, e, "An unknown error occurred while initializing the Git repository.")
+
+
+@jetha_bhai.command("commit-maro", help="Commit changes to the Git repository")
+@click.pass_context
+@click.argument("message")
+def commit_maro(ctx, message):
+    try:
+        subprocess.run(["git", "commit", "-m", message], capture_output=True, text=True, check=True)
+        print_rainbow("Commit kar diya hai, Champak chacha ko mat batana!")
+    except FileNotFoundError as e:
+        _handle_git_command_error(ctx, e, "")
+    except subprocess.CalledProcessError as e:
+        _handle_git_command_error(ctx, e, "An unknown error occurred during the commit.")

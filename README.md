@@ -20,13 +20,15 @@ jetha-bhai list-kardo
 
 ## Table
 
-| command     | jetha-cli                       |
-| ----------- | ------------------------------- |
-| pwd         | jetha-bhai babita-ji-kaha       |
-| ls          | jetha-bhai list-kardo           |
-| mkdir c1    | jetha-bdhai ye-banado c1        |
-| mv f1 c2    | jetha-bhai move-on-karado f1 c2 |
-| rm -rf f1   | jetha-bhai udado-isko f1        |
-| cp -r f1 f2 | jetha-bhai copy-maro f1 f2      |
+| Command (Shell)        | jetha-bhai CLI Command            | Description                                     |
+| ---------------------- | --------------------------------- | ----------------------------------------------- |
+| `pwd`                  | `jetha-bhai babita-ji-kaha`       | Display the current working directory.          |
+| `ls`                   | `jetha-bhai list-kardo`           | List files and directories.                     |
+| `mkdir <dirname>`      | `jetha-bhai ye-banado <dirname>`  | Create a new directory.                         |
+| `mv <src> <dest>`      | `jetha-bhai move-on-karado <src> <dest>` | Move a file or directory.                    |
+| `rm -rf <path>`        | `jetha-bhai udado-isko <path>`    | Remove a file or directory.                     |
+| `cp -r <src> <dest>`   | `jetha-bhai copy-maro <src> <dest>` | Copy a file or directory.                       |
+| `git init`             | `jetha-bhai git-chalu-karo`       | Initialize a new Git repository.                |
+| `git commit -m "msg"`  | `jetha-bhai commit-maro "msg"`    | Record changes to the repository with a message. |
 
 # Thank you
